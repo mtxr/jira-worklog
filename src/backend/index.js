@@ -9,7 +9,7 @@ const server = require('http').createServer(app)
 var bodyParser = require('body-parser')
 
 app.use(bodyParser.json())
-app.use(express.static(`${__dirname}/public`))
+app.use(express.static(`${__dirname}/../../public`))
 
 app.get('/search', (req, res) => {
   const { username, protocol, password, host, version, jql } = req.query || {}

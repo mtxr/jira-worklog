@@ -1,3 +1,4 @@
-config.json
+src/backend/config.json
 node_modules
 report.html
+package-lock.json
