@@ -4,15 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "start:dev": "IS_DEV=true nodemon",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "jira-client": "^6.3.0",
-    "minimist": "^1.2.0",
-    "moment": "^2.18.1",
-    "open": "0.0.5",
+    "body-parser": "^1.17.2",
+    "express": "^4.15.3",
+    "open": "^0.0.5",
     "request": "^2.81.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
   }
 }
