@@ -1,8 +1,0 @@
-{
-  "protocol": "https",
-  "host": "jira.ci.gsnet.corp",
-  "username": "xb191713",
-  "password": "xb191713",
-  "apiVersion": 2,
-  "strictSSL": false
-}
