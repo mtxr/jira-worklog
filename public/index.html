@@ -9,7 +9,7 @@
   <script src="bundle.js"></script>
 </head>
 
-<body>
+<body style="display: none;">
   <main>
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
@@ -21,18 +21,18 @@
     <div class="container">
       <div class="row">
         <div class="col-xs-4 col-xs-offset-4">
-          <div class="jumbotron">
+          <form class="jumbotron" id="auth">
             <div class="form-group">
-              <label for="" class="label-control">Matrícula</label>
-              <input type="text" class="form-control">
+              <label for="" class="label-control">Usuário</label>
+              <input type="text" class="form-control" name="username" id="username">
             </div>
             <div class="form-group">
               <label for="" class="label-control">Senha</label>
-              <input type="password" class="form-control">
+              <input type="password" class="form-control" name="password" id="password">
             </div>
             <div class="form-group">
               <label for="" class="label-control">Projeto</label>
-              <input type="text" class="form-control">
+              <input type="text" class="form-control" name="project" id="project">
             </div>
             <button type="submit" class="btn btn-primary btn-block">Entrar</button>
           </div>
@@ -41,5 +41,28 @@
     </div>
   </main>
 </body>
+<script>
+$(function() {
+  $("#username").focus();
+  var savedData = localStorage.getItem('jira-worklog') || null;
+  if (savedData) {
+    window.location.href = '/logado.html';
+    return;
+  }
 
+  $('body').fadeIn();
+  var $form = $('#auth');
+  $('body').on('submit', '#auth', function(e) {
+    var authData = $form.serializeArray();
+    authData = authData.reduce(function(prev, cur) {
+      prev[cur.name] = cur.value;
+      return prev;
+    }, {});
+    localStorage.setItem('jira-worklog', btoa(JSON.stringify(authData)));
+    window.location.href = '/logado.html';
+    e.preventDefault();
+    return false;
+  })
+})
+</script>
 </html>
