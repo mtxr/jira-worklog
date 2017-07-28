@@ -9,12 +9,15 @@
   <script src="bundle.js"></script>
 </head>
 
-<body>
+<body style="display: none;">
   <main>
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
           <a class="navbar-brand" href="#">Controle de Jornada</a>
+        </div>
+        <div class="navbar-right">
+          <button type="button" class="btn btn-default" id="logout" style="margin-top: 8px;">Sair</button>
         </div>
       </div>
     </nav>
@@ -101,5 +104,23 @@
     </div>
   </main>
 </body>
-
+<script>
+$(function() {
+  var savedData = localStorage.getItem('jira-worklog') || null;
+  if (!savedData) {
+    window.location.href = '/';
+    return;
+  }
+  savedData = JSON.parse(atob(savedData));
+  delete savedData.password;
+  Object.keys(savedData).forEach(function(field) {
+    $('#' + field).val(savedData[field]);
+  });
+  $('body').fadeIn();
+  $('body').on('click', '#logout', function() {
+    localStorage.clear();
+    window.location.href = '/';
+  })
+})
+</script>
 </html>
