@@ -3,3 +3,4 @@ node_modules
 report.html
 package-lock.json
 mock
+config.json
