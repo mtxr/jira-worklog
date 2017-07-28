@@ -6,11 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Controle de Jornada</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="vue.js"></script>
+  <script src="https://unpkg.com/moment"></script>
   <script src="bundle.js"></script>
 </head>
 
 <body style="display: none;">
-  <main>
+  <main id="app">
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
@@ -22,29 +24,29 @@
       </div>
     </nav>
     <div class="container">
-      <div class="row">
+      <form class="row" id="worklog-create">
         <div class="col-sm-2">
           <div class="form-group">
             <label for="" class="sr-only">Task</label>
-            <input type="text" class="form-control" placeholder="Task">
+            <input type="text" class="form-control" placeholder="Task" v-model="task" name="task">
           </div>
         </div>
         <div class="col-sm-2">
           <div class="form-group">
             <label for="" class="sr-only">Data</label>
-            <input type="text" class="form-control" placeholder="Data">
+            <input type="date" class="form-control" placeholder="Data" v-model="date" name="date" v-bind:max="today">
           </div>
         </div>
         <div class="col-sm-2">
           <div class="form-group">
             <label for="" class="sr-only">Hora</label>
-            <input type="text" class="form-control" placeholder="Hora">
+            <input type="time" class="form-control" placeholder="Hora" v-model="time" name="time">
           </div>
         </div>
         <div class="col-sm-2">
           <div class="form-group">
             <label for="" class="sr-only">Tempo gasto</label>
-            <input type="text" class="form-control" placeholder="Tempo gasto">
+            <input type="text" class="form-control" placeholder="Tempo gasto" v-model="spent" name="spent">
           </div>
         </div>
         <div class="col-sm-2">
@@ -52,54 +54,37 @@
             <button type="submit" class="btn btn-primary btn-block">Registrar</button>
           </div>
         </div>
-      </div>
+      </form>
       <table class="table table-striped table-hours">
         <thead>
           <tr>
             <th>Author</th>
-            <th>03/07</th>
-            <th>04/07</th>
-            <th>05/07</th>
-            <th>06/07</th>
-            <th>07/07</th>
-            <th>08/07</th>
-            <th>10/07</th>
-            <th>11/07</th>
-            <th>12/07</th>
-            <th>13/07</th>
+            <th v-for="date in dates" v-bind:class="[ date == todayCmp.format('DD/MM') ? 'today' : '' ]">{{ date }}</th>
             <th>Total</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td><img src="https://jira.ci.gsnet.corp/secure/useravatar?size=xsmall&amp;avatarId=10122"> ADOLFO ALVES</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td>8.78</td>
-          </tr>
-          <tr>
-            <td><img src="https://jira.ci.gsnet.corp/secure/useravatar?size=xsmall&amp;avatarId=12149"> CLAUDIA GUSSON</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td class="time">8.00</td>
-            <td>64.00</td>
+        <tbody v-if="users && users.length > 0">
+          <tr v-for="user in users">
+            <td><img v-bind:src="user.avatar"> {{ user.name }}</td>
+            <td v-for="date in user.dates" class="time" v-bind:class="[ date.date == todayCmp.format('YYYY-MM-DD') ? 'today' : '' ]">
+              {{ date.spent ? (date.spent / 3600).toFixed(2) : '' }}
+            </td>
+            <td>{{ (user.totalSpent / 3600).toFixed(2) }}</td>
           </tr>
         </tbody>
+        <tbody v-if="!users || users.length === 0">
+            <tr>
+              <td v-bind:colspan="dates.length + 2" class="text-center">Carregando</td>
+            </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td v-for="date in datesTotals" class="time" v-bind:class="[ date.date == todayCmp.format('YYYY-MM-DD') ? 'today' : '' ]">
+              {{ date.total ? (date.total / 3600).toFixed(2) : '' }}
+            </td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </main>
@@ -112,15 +97,86 @@ $(function() {
     return;
   }
   savedData = JSON.parse(atob(savedData));
-  delete savedData.password;
-  Object.keys(savedData).forEach(function(field) {
-    $('#' + field).val(savedData[field]);
-  });
   $('body').fadeIn();
   $('body').on('click', '#logout', function() {
     localStorage.clear();
     window.location.href = '/';
   })
+  var today = moment();
+  var startDate = moment().add(-6, 'days');
+  var endDate = moment().add(1, 'days');
+  var dates = [];
+  while(startDate.isBefore(endDate)) {
+    dates.push(startDate.format('DD/MM'));
+    startDate.add(1, 'day')
+  }
+  var app = new Vue({
+    el: '#app',
+    data: {
+      todayCmp: today,
+      today: today.format('YYYY-MM-DD'),
+      task: null,
+      date: today.format('YYYY-MM-DD'),
+      time: '10:00',
+      spent: '1h',
+      dates: dates,
+      datesTotals: {},
+      users: [ ]
+    }
+  })
+  function updateReport(task) {
+    $.ajax({
+      cache: false,
+      type: "GET",
+      url: `http://localhost:5000/report?username=${savedData.username}&password=${encodeURIComponent(savedData.password)}&project=${savedData.project}${task ? `&task=${task}` : ''}`,
+      contentType: 'application/json',
+      success: function(data) {
+        console.log(data)
+        app.users = data.users
+        var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
+        totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
+        app.datesTotals = totals
+      }
+    });
+    // $.ajax(`http://localhost:5000/report?username=${savedData.username}&password=${encodeURIComponent(savedData.password)}&project=${savedData.project}${task ? `&task=${task}` : ''}`, function(data) {
+    //   console.log(data)
+    //   app.users = data.users
+    //   var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
+    //   totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
+    //   app.datesTotals = totals
+    // })
+  }
+
+  var $form = $('#worklog-create')
+  $form.submit(function(e) {
+    e.preventDefault();
+    var createData = $form.serializeArray();
+    createData = createData.reduce(function(prev, cur) {
+      prev[cur.name] = cur.value;
+      return prev;
+    }, {});
+    var data = JSON.stringify({
+      started: `${createData.date}T${createData.time}:00.000+0000`,
+      timeSpent: createData.spent,
+    })
+    $.ajax({
+      type: "POST",
+      url: `http://localhost:5000/worklog/${createData.task}`,
+      data: data,
+      contentType: 'application/json',
+      success: function(data) {
+        console.log(data)
+        alert('Sucesso!')
+        updateReport(createData.task)
+      },
+      error: function(a, b, c) {
+        console.log(a, b, c)
+        alert('Erro!')
+      }
+    });
+    return false;
+  })
+  updateReport()
 })
 </script>
 </html>

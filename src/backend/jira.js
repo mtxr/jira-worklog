@@ -15,29 +15,33 @@ function setup (u, p, s, pro, v) {
   version = v
 }
 
-function search (jql) {
+function search (jql, cb = undefined) {
+  const query = {
+    fields: ['key'].join(','),
+    jql
+  }
   return request({
     method: 'GET',
-    url: `${protocol}://${username}:${password}@${server}/rest/api/${version}/search?${qs.stringify(jql)}`,
+    url: `${protocol}://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${server}/rest/api/${version}/search?${qs.stringify(query)}`,
     strictSSL: false
-  })
+  }, cb)
 }
 
-function worklog (id) {
+function worklog (id, cb = undefined) {
   return request({
     method: 'GET',
-    url: `${protocol}://${username}:${password}@${server}/rest/api/${version}/issue/${id}/worklog`,
+    url: `${protocol}://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${server}/rest/api/${version}/issue/${id}/worklog`,
     strictSSL: false
-  })
+  }, cb)
 }
 
-function createWorklog (id, body) {
+function createWorklog (id, body, cb = undefined) {
   return request({
     method: 'POST',
-    url: `${protocol}://${username}:${password}@${server}/rest/api/${version}/issue/${id}/worklog`,
+    url: `${protocol}://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${server}/rest/api/${version}/issue/${id}/worklog`,
     strictSSL: false,
     json: body
-  })
+  }, cb)
 }
 
 module.exports = {
