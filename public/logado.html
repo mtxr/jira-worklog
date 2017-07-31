@@ -97,19 +97,11 @@ $(function() {
     return;
   }
   savedData = JSON.parse(atob(savedData));
-<<<<<<< HEAD
-=======
-  delete savedData.password;
-  Object.keys(savedData).forEach(function(field) {
-    $('#' + field).val(savedData[field]);
-  });
->>>>>>> 8f5770597ba0ee5d98f5ef35ec5e4b0d8f42f749
   $('body').fadeIn();
   $('body').on('click', '#logout', function() {
     localStorage.clear();
     window.location.href = '/';
   })
-<<<<<<< HEAD
   var today = moment();
   var startDate = moment().add(-6, 'days');
   var endDate = moment().add(1, 'days');
@@ -185,8 +177,6 @@ $(function() {
     return false;
   })
   updateReport()
-=======
->>>>>>> 8f5770597ba0ee5d98f5ef35ec5e4b0d8f42f749
 })
 </script>
 </html>
