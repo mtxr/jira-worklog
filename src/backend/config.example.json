@@ -1,6 +1,6 @@
 {
   "protocol": "https",
-  "host": "jira.server.com",
+  "host": "jira.ci.gsnet.corp",
   "username": "username",
   "password": "password",
   "apiVersion": 2,
