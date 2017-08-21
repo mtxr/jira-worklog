@@ -91,10 +91,8 @@ app.get('/report', (req, res) => {
         issues.forEach((issue) => {
           issue.worklogs.forEach((wl) => {
             let worklogDate = moment(wl.started.substring(0, 10))
-            if (start !== null && end !== null) {
-              if (worklogDate < startDate) return
-              if (worklogDate > endDate) return
-            }
+            if (worklogDate < startDate) return
+            if (worklogDate > endDate) return
             worklogDate = worklogDate.format('YYYY-MM-DD')
             const author = wl.author.displayName
             reportCache[author] = reportCache[author] || { name: author, totalSpent: 0, avatar: wl.author.avatarUrls['24x24'], dates: {} }
