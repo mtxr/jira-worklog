@@ -138,13 +138,6 @@ $(function() {
         app.datesTotals = totals
       }
     });
-    // $.ajax(`http://localhost:5000/report?username=${savedData.username}&password=${encodeURIComponent(savedData.password)}&project=${savedData.project}${task ? `&task=${task}` : ''}`, function(data) {
-    //   console.log(data)
-    //   app.users = data.users
-    //   var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
-    //   totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
-    //   app.datesTotals = totals
-    // })
   }
 
   var $form = $('#worklog-create')
@@ -166,8 +159,12 @@ $(function() {
       contentType: 'application/json',
       success: function(data) {
         console.log(data)
-        alert('Sucesso!')
-        updateReport(createData.task)
+        app.users = []
+        app.users = data.users
+        var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
+        totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
+        app.datesTotals = totals
+        app.$forceUpdate();
       },
       error: function(a, b, c) {
         console.log(a, b, c)

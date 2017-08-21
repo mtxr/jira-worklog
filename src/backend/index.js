@@ -36,7 +36,22 @@ const getIssueWorklogs = (key, att = 3) => {
     return getIssueWorklogs(key, att--)
   })
 }
+
 let reportCache = {}
+let loggedDates = {}
+function serializeReport () {
+  let users = Object.keys(reportCache).sort((a, b) => a.localeCompare(b)).map((name) => reportCache[name])
+  loggedDates = Object.keys(loggedDates).sort((a, b) => new Date(a) - new Date(b)).reduce((prev, dt) => { prev[dt] = loggedDates[dt]; return prev }, {})
+  users = users.map((user) => {
+    user.dates = Object.keys(loggedDates).sort((a, b) => new Date(a) - new Date(b)).map((date) => {
+      user.dates[date] = user.dates[date] || {}
+      return { date, spent: user.dates[date].spent || null, issues: user.dates[date].issues || {} }
+    })
+    return user
+  })
+  return { users, dates: loggedDates }
+}
+
 app.get('/report', (req, res) => {
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
   res.header('Pragma', 'no-cache')
@@ -48,8 +63,17 @@ app.get('/report', (req, res) => {
   if (!task && reportCache[`${start}${end}`]) {
     return res.json(reportCache[`${start}${end}`])
   }
-  reportCache = {}
-  const jql = `(worklogDate >= '${start}' OR updated >= '${start}' OR created >= '${start}') AND (worklogDate <= '${end}' OR updated <= '${end}' OR created <= '${end}') AND timespent > 0 ${project ? ' AND project = ' + project : ''}`
+  reportCache = reportCache || {}
+  const jql = `(
+    (
+      worklogDate >= '${start}' AND worklogDate <= '${end}'
+    ) OR (
+      updated >= '${start}' AND updated <= '${end}'
+    ) OR (
+      created >= '${start}' AND created <= '${end}'
+    )
+  ) AND timespent >= 0 ${project ? 'AND project = ' + project : ''}`
+
   jira.setup(cfg.username || username, cfg.password || password, cfg.host || host, cfg.protocol || protocol, cfg.apiVersion || version)
   jira.search(jql, (error, response, body) => {
     try {
@@ -57,13 +81,11 @@ app.get('/report', (req, res) => {
       const data = JSON.parse(body)
       return Promise.all(data.issues.map((i) => getIssueWorklogs(i.key)))
       .then((issues) => {
-        let dates = {}
-        const users = {}
         const startDate = moment(start)
         const loopDate = moment(start)
         const endDate = moment(end).endOf('day')
         while (loopDate.isBefore(endDate)) {
-          dates[loopDate.format('YYYY-MM-DD')] = 0
+          loggedDates[loopDate.format('YYYY-MM-DD')] = 0
           loopDate.add(1, 'days')
         }
         issues.forEach((issue) => {
@@ -73,44 +95,26 @@ app.get('/report', (req, res) => {
               if (worklogDate < startDate) return
               if (worklogDate > endDate) return
             }
-            const author = wl.author.displayName
             worklogDate = worklogDate.format('YYYY-MM-DD')
-            dates[worklogDate] = dates[worklogDate] || 0
-            users[author] = users[author] || { name: wl.author.displayName, avatar: wl.author.avatarUrls['24x24'] }
-            users[author].totalSpent = users[author].totalSpent || 0
-            users[author]['dates'] = users[author]['dates'] || {}
-            users[author]['dates'][worklogDate] = users[author]['dates'][worklogDate] || { issues: {}, spent: 0 }
-            users[author]['dates'][worklogDate].spent += wl.timeSpentSeconds
-            users[author]['dates'][worklogDate].issues[issue.key] = users[author]['dates'][worklogDate].issues[issue.key] || 0
-            users[author]['dates'][worklogDate].issues[issue.key] += wl.timeSpentSeconds
-            users[author].totalSpent += wl.timeSpentSeconds
-            dates[worklogDate] += wl.timeSpentSeconds
+            const author = wl.author.displayName
+            reportCache[author] = reportCache[author] || { name: author, totalSpent: 0, avatar: wl.author.avatarUrls['24x24'], dates: {} }
+            reportCache[author].dates[worklogDate] = reportCache[author].dates[worklogDate] || { spent: 0, issues: { } }
+            reportCache[author].dates[worklogDate].issues[issue.key] = reportCache[author].dates[worklogDate].issues[issue.key] || 0
+            reportCache[author].dates[worklogDate].issues[issue.key] += wl.timeSpentSeconds
+            reportCache[author].dates[worklogDate].spent += wl.timeSpentSeconds
+            reportCache[author].totalSpent += wl.timeSpentSeconds
+            loggedDates[worklogDate] = loggedDates[worklogDate] || 0
+            loggedDates[worklogDate] += wl.timeSpentSeconds
           })
         })
-        return Promise.all([
-          Object.keys(dates).sort((a, b) => new Date(a) - new Date(b)).reduce((prev, dt) => { prev[dt] = dates[dt]; return prev }, {}),
-          Object.keys(users).sort((a, b) => a.localeCompare(b)).map((name) => users[name])
-        ])
-      })
-      .then(([dates, users]) => {
-        const loggedDates = Object.keys(dates)
-        users = users.map((user) => {
-          user.dates = loggedDates.map((date) => {
-            user.dates[date] = user.dates[date] || {}
-            return { date, spent: user.dates[date].spent || null, issues: user.dates[date].issues || {} }
-          })
-          return user
-        })
-        return { users, dates }
-      })
-      .then((all) => {
-        reportCache[`${start}${end}`] = all
-        return res.json(all)
+        return res.json(serializeReport())
       })
       .catch((er) => {
+        console.error(er)
         return res.json({ error: er.message })
       })
     } catch (er) {
+      console.error(er)
       res.statusCode = 400
       return res.json({ error: er.message })
     }
@@ -136,12 +140,21 @@ app.post('/worklog/:id', (req, res) => {
   const { body } = req
   jira.setup(cfg.username || username, cfg.password || password, cfg.host || host, cfg.protocol || protocol, cfg.apiVersion || version)
 
-  jira.createWorklog(id, body, (error, response, body) => {
+  jira.createWorklog(id, body, (error, response, wl) => {
     try {
       if (error) throw error
-      reportCache = {}
-      return res.json(body)
+      let worklogDate = moment(wl.started.substring(0, 10))
+      worklogDate = worklogDate.format('YYYY-MM-DD')
+      const author = wl.author.displayName
+      reportCache[author] = reportCache[author] || { name: author, totalSpent: 0, avatar: wl.author.avatarUrls['24x24'], dates: {} }
+      reportCache[author].dates[worklogDate] = reportCache[author].dates[worklogDate] || { spent: 0, issues: { } }
+      reportCache[author].dates[worklogDate].issues[id] = reportCache[author].dates[worklogDate].issues[id] || 0
+      reportCache[author].dates[worklogDate].issues[id] += wl.timeSpentSeconds
+      reportCache[author].dates[worklogDate].spent += wl.timeSpentSeconds
+      reportCache[author].totalSpent += wl.timeSpentSeconds
+      return res.json(serializeReport())
     } catch (er) {
+      console.error(er)
       res.statusCode = 400
       return res.json({ error: er.message })
     }
