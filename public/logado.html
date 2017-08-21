@@ -160,11 +160,13 @@ $(function() {
       success: function(data) {
         console.log(data)
         app.users = []
-        app.users = data.users
+        // app.users = data.users
         var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
         totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
         app.datesTotals = totals
-        app.$forceUpdate();
+        data.users.forEach(function(user, index) {
+          Vue.set(app.users, index, user)
+        })
       },
       error: function(a, b, c) {
         console.log(a, b, c)
