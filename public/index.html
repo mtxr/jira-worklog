@@ -23,12 +23,16 @@
         <div class="col-xs-4 col-xs-offset-4">
           <form class="jumbotron" id="auth">
             <div class="form-group">
+              <label for="" class="label-control">Servidor</label>
+              <input type="text" class="form-control" name="server" id="server" placeholder="https://meujira.com.br" required>
+            </div>
+            <div class="form-group">
               <label for="" class="label-control">Usuário</label>
-              <input type="text" class="form-control" name="username" id="username">
+              <input type="text" class="form-control" name="username" id="username" placeholder="Usuário" required>
             </div>
             <div class="form-group">
               <label for="" class="label-control">Senha</label>
-              <input type="password" class="form-control" name="password" id="password">
+              <input type="password" class="form-control" name="password" id="password" required>
             </div>
             <div class="form-group">
               <label for="" class="label-control">Projeto</label>
@@ -43,26 +47,64 @@
 </body>
 <script>
 $(function() {
+  function auth(authData, shouldNotAlert) {
+    $.ajax({
+      cache: false,
+      type: "POST",
+      data: JSON.stringify(authData),
+      dataType: 'json',
+      url: `http://localhost:5000/auth`,
+      contentType: 'application/json',
+    })
+    .done(function(data) {
+      console.log('Login!', data)
+      authData.lastLogin = new Date()
+      localStorage.setItem('jira-worklog-v1', btoa(JSON.stringify(authData)));
+      window.location.href = '/logado.html';
+    })
+    .fail(function (jqXHR, textStatus, errorThrown ) {
+      $('body').fadeIn();
+      console.log('ERROR:', textStatus, errorThrown, jqXHR)
+      if (!shouldNotAlert) {
+        alert(`Erro! ${jqXHR.responseJSON.message ? jqXHR.responseJSON.message : ''}`)
+      }
+    })
+  }
   $("#username").focus();
-  var savedData = localStorage.getItem('jira-worklog') || null;
-  if (savedData) {
-    window.location.href = '/logado.html';
+  var savedData = localStorage.getItem('jira-worklog-v1') || null;
+  savedData = savedData ? JSON.parse(atob(savedData)) : null;
+  if (savedData && (Math.abs(new Date() - new Date(savedData.lastLogin || 0)) / 86400000 / 3600000) <= 8) {
+    auth(savedData, true)
     return;
   }
+  else {
+    $('body').fadeIn();
+  }
+  if (savedData) {
+    console.log('Login time', (Math.abs(new Date() - new Date(savedData.lastLogin || 0)) / 86400000 / 3600000));
+    Object.keys(savedData).forEach(function(key) {
+      if (key === 'password') return
+      $(`#${key}`).val(savedData[key])
+    })
+  }
+  console.log('saved', savedData)
 
-  $('body').fadeIn();
   var $form = $('#auth');
   $('body').on('submit', '#auth', function(e) {
+    // e.preventDefault();
     var authData = $form.serializeArray();
     authData = authData.reduce(function(prev, cur) {
       prev[cur.name] = cur.value;
       return prev;
     }, {});
-    localStorage.setItem('jira-worklog', btoa(JSON.stringify(authData)));
-    window.location.href = '/logado.html';
-    e.preventDefault();
+    auth(authData)
     return false;
-  })
+  // }).on('keydown keypress keyup', 'input', function(event){
+  //   if( (event.keyCode == 13) && (validationFunction() == false) ) {
+  //     event.preventDefault();
+  //     return false;
+  //   }
+  });
 })
 </script>
 </html>

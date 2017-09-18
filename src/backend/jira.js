@@ -11,8 +11,8 @@ function setup (u, p, s, pro, v) {
   username = u
   password = p
   server = s
-  protocol = pro
-  version = v
+  protocol = (pro || '').replace(/:$/, '')
+  version = v || '2'
 }
 
 function search (jql, cb = undefined) {

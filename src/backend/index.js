@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const cfg = require('./config.json')
 const open = require('open')
 const express = require('express')
 const jira = require('./jira')
@@ -8,6 +7,7 @@ const app = express()
 const server = require('http').createServer(app)
 const bodyParser = require('body-parser')
 const moment = require('moment')
+const url = require('url')
 
 app.use(bodyParser.json())
 app.use(express.static(`${__dirname}/../../public`))
@@ -57,7 +57,7 @@ app.get('/report', (req, res) => {
   res.header('Pragma', 'no-cache')
   res.header('Expires', 0)
 
-  const { username, protocol, password, host, version, project, task } = req.query || {}
+  const { project, task } = req.query || {}
   const start = moment().add(-6, 'days').format('YYYY-MM-DD')
   const end = moment().add(1, 'days').format('YYYY-MM-DD')
   if (!task && reportCache[`${start}${end}`]) {
@@ -74,7 +74,6 @@ app.get('/report', (req, res) => {
     )
   ) AND timespent >= 0 ${project ? 'AND project = ' + project : ''}`
 
-  jira.setup(cfg.username || username, cfg.password || password, cfg.host || host, cfg.protocol || protocol, cfg.apiVersion || version)
   jira.search(jql, (error, response, body) => {
     try {
       if (error) throw error
@@ -119,24 +118,40 @@ app.get('/report', (req, res) => {
   })
 })
 
+const cfg = {}
+app.post('/auth', (req, res) => {
+  const { username, server, password, version, project } = req.body
+  if (!(username && server && password)) {
+    res.status(500)
+    return res.json('Preencha o servidor, usuário e senha.')
+  }
+  const parsedUrl = url.parse(server)
+  cfg.username = username
+  cfg.password = password
+  cfg.project = project
+  cfg.version = version || 2
+  cfg.protocol = parsedUrl.protocol
+  cfg.host = parsedUrl.host
+  jira.setup(cfg.username, cfg.password, cfg.host, cfg.protocol, cfg.apiVersion)
+  const result = JSON.parse(JSON.stringify(cfg))
+  delete result.password
+  console.log(result)
+  res.json(result)
+})
+
 app.get('/search', (req, res) => {
-  const { username, protocol, password, host, version, jql } = req.query || {}
-  jira.setup(cfg.username || username, cfg.password || password, cfg.host || host, cfg.protocol || protocol, cfg.apiVersion || version)
+  const { jql } = req.query || {}
   jira.search(jql).pipe(res)
 })
 
 app.get('/worklog/:id', (req, res) => {
-  const { username, protocol, password, host, version } = req.query || {}
   const { id } = req.params || {}
-  jira.setup(cfg.username || username, cfg.password || password, cfg.host || host, cfg.protocol || protocol, cfg.apiVersion || version)
   jira.worklog(id).pipe(res)
 })
 
 app.post('/worklog/:id', (req, res) => {
-  const { username, protocol, password, host, version } = req.query || {}
   const { id } = req.params || {}
   const { body } = req
-  jira.setup(cfg.username || username, cfg.password || password, cfg.host || host, cfg.protocol || protocol, cfg.apiVersion || version)
 
   jira.createWorklog(id, body, (error, response, wl) => {
     try {

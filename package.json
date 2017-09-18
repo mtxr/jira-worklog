@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "auto-updater": "^1.0.2",
     "body-parser": "^1.17.2",
     "express": "^4.15.3",
     "moment": "^2.18.1",

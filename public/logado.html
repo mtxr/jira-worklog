@@ -91,15 +91,38 @@
 </body>
 <script>
 $(function() {
-  var savedData = localStorage.getItem('jira-worklog') || null;
-  if (!savedData) {
-    window.location.href = '/';
+  var savedData = localStorage.getItem('jira-worklog-v1') || null;
+  savedData = savedData ? JSON.parse(atob(savedData)) : null;
+  if (!savedData || (savedData && (Math.abs(new Date() - new Date(savedData.lastLogin || 0)) / 86400000 / 3600000) > 8)) {
+    console.log('params', savedData)
+    // window.location.href = '/';
     return;
   }
-  savedData = JSON.parse(atob(savedData));
+  console.log('Login time', (Math.abs(new Date() - new Date(savedData.lastLogin || 0)) / 86400000 / 3600000));
+  function auth(authData) {
+    $.ajax({
+      cache: false,
+      type: "POST",
+      data: JSON.stringify(authData),
+      dataType: 'json',
+      url: `http://localhost:5000/auth`,
+      contentType: 'application/json',
+    })
+    .done(function(data) {
+      console.log('Login!', data)
+      authData.lastLogin = new Date()
+      localStorage.setItem('jira-worklog-v1', btoa(JSON.stringify(authData)));
+    })
+    .fail(function (jqXHR, textStatus, errorThrown ) {
+      // window.location.href = '/'
+
+    })
+  }
+  auth(savedData, true)
   $('body').fadeIn();
   $('body').on('click', '#logout', function() {
-    localStorage.clear();
+    savedData.lastLogin = null
+    localStorage.setItem('jira-worklog-v1', btoa(JSON.stringify(savedData)));
     window.location.href = '/';
   })
   var today = moment();
@@ -128,7 +151,7 @@ $(function() {
     $.ajax({
       cache: false,
       type: "GET",
-      url: `http://localhost:5000/report?username=${savedData.username}&password=${encodeURIComponent(savedData.password)}&project=${savedData.project}${task ? `&task=${task}` : ''}`,
+      url: `http://localhost:5000/report?${task ? `task=${task}` : ''}`,
       contentType: 'application/json',
       success: function(data) {
         console.log(data)
