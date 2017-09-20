@@ -57,7 +57,7 @@ app.get('/report', (req, res) => {
   res.header('Pragma', 'no-cache')
   res.header('Expires', 0)
 
-  const { project, task } = req.query || {}
+  const { task } = req.query || {}
   const start = moment().add(-6, 'days').format('YYYY-MM-DD')
   const end = moment().add(1, 'days').format('YYYY-MM-DD')
   if (!task && reportCache[`${start}${end}`]) {
@@ -72,7 +72,7 @@ app.get('/report', (req, res) => {
     ) OR (
       created >= '${start}' AND created <= '${end}'
     )
-  ) AND timespent >= 0 ${project ? 'AND project = ' + project : ''}`
+  ) AND timespent >= 0 ${cfg.project ? 'AND project = ' + cfg.project : ''}`
 
   jira.search(jql, (error, response, body) => {
     try {
