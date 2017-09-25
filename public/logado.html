@@ -55,6 +55,17 @@
           </div>
         </div>
       </form>
+      <div class="row">
+        <div class="col-sm-3">
+            <div class="input-group">
+              <span class="input-group-addon" id="basic-addon1">Semana</span>
+              <input type="number" min="1" max="52" class="form-control" placeholder="Semana" aria-describedby="basic-addon1" v-model="week" name="week">
+            </div>
+        </div>
+        <div class="col-sm-3">
+          <button type="button" class="btn btn-primary" id="refresh">Atualizar</button>
+        </div>
+      </div>
       <table class="table table-striped table-hours">
         <thead>
           <tr>
@@ -86,6 +97,29 @@
           </tr>
         </tfoot>
       </table>
+      <table class="table table-striped table-hours">
+        <thead>
+          <tr>
+            <th>Issue</th>
+            <th>Author</th>
+            <th>Data</th>
+            <th>Tempo</th>
+          </tr>
+        </thead>
+        <tbody v-if="worklogs && worklogs.length > 0">
+          <tr v-for="worklog in worklogs">
+            <td><a v-bind:href="worklog.url">{{ worklog.issue }}</a></td>
+            <td>{{ worklog.author }}</td>
+            <td>{{ worklog.wlDate }}</td>
+            <td>{{ (worklog.timeSpentSeconds / 3600).toFixed(2) }}</td>
+          </tr>
+        </tbody>
+        <tbody v-if="!worklogs || worklogs.length === 0">
+            <tr>
+              <td colspan="4" class="text-center">Carregando</td>
+            </tr>
+        </tbody>
+      </table>
     </div>
   </main>
 </body>
@@ -94,8 +128,7 @@ $(function() {
   var savedData = localStorage.getItem('jira-worklog-v1') || null;
   savedData = savedData ? JSON.parse(atob(savedData)) : null;
   if (!savedData || (savedData && (Math.abs(new Date() - new Date(savedData.lastLogin || 0)) / 86400000 / 3600000) > 8)) {
-    console.log('params', savedData)
-    // window.location.href = '/';
+    window.location.href = '/';
     return;
   }
   console.log('Login time', (Math.abs(new Date() - new Date(savedData.lastLogin || 0)) / 86400000 / 3600000));
@@ -114,20 +147,14 @@ $(function() {
       localStorage.setItem('jira-worklog-v1', btoa(JSON.stringify(authData)));
     })
     .fail(function (jqXHR, textStatus, errorThrown ) {
-      // window.location.href = '/'
-
+      window.location.href = '/'
     })
   }
   auth(savedData, true)
   $('body').fadeIn();
-  $('body').on('click', '#logout', function() {
-    savedData.lastLogin = null
-    localStorage.setItem('jira-worklog-v1', btoa(JSON.stringify(savedData)));
-    window.location.href = '/';
-  })
   var today = moment();
-  var startDate = moment().add(-6, 'days');
-  var endDate = moment().add(1, 'days');
+  var startDate = moment().startOf('week');
+  var endDate = moment().endOf('week');
   var dates = [];
   while(startDate.isBefore(endDate)) {
     dates.push(startDate.format('DD/MM'));
@@ -136,6 +163,7 @@ $(function() {
   var app = new Vue({
     el: '#app',
     data: {
+      week: today.week(),
       todayCmp: today,
       today: today.format('YYYY-MM-DD'),
       task: null,
@@ -144,21 +172,63 @@ $(function() {
       spent: '1h',
       dates: dates,
       datesTotals: {},
-      users: [ ]
+      users: [ ],
+      worklogs: []
     }
   })
-  function updateReport(task) {
+  function refreshTable(data) {
+    app.dates = []
+    app.users = []
+    app.datesTotals = {}
+    app.worklogs = data.worklogs
+
+    const week = app.week
+    const start = moment().week(week || moment().week()).startOf('week')
+    const end = moment().week(week || moment().week()).endOf('week')
+    console.log(start, end)
+    while (start.isBefore(end)) {
+      app.dates.push(start.format('DD/MM/YYYY'))
+      start.add(1, 'days')
+    }
+    let dates = {}
+    let users = {}
+    const reportCache = {}
+    data.worklogs.forEach((wl) => {
+      const worklogDate = moment(wl.wlDate).format('DD/MM/YYYY')
+      const author = wl.author
+      reportCache[author] = reportCache[author] || { name: author, totalSpent: 0, dates: {} }
+      reportCache[author].dates[worklogDate] = reportCache[author].dates[worklogDate] || { spent: 0, issues: { } }
+      reportCache[author].dates[worklogDate].issues[wl.issue] = reportCache[author].dates[worklogDate].issues[wl.issue] || 0
+      reportCache[author].dates[worklogDate].issues[wl.issue] += wl.timeSpentSeconds
+      reportCache[author].dates[worklogDate].spent += wl.timeSpentSeconds
+      reportCache[author].totalSpent += wl.timeSpentSeconds
+    })
+    users = Object.keys(reportCache).sort((a, b) => a.localeCompare(b)).map((name) => reportCache[name])
+    app.users = users.map((user) => {
+      user.dates = app.dates.map((date) => {
+        user.dates[date] = user.dates[date] || {}
+        return { date, spent: user.dates[date].spent || null, issues: user.dates[date].issues || {} }
+      })
+      return user
+    })
+    console.log(app.users, app.dates)
+    // var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
+    // totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
+    // app.datesTotals = totals
+    // data.users.forEach(function(user, index) {
+    //   Vue.set(app.users, index, user)
+    // })
+  }
+
+  function updateReport(week, task) {
+    week = app.week
     $.ajax({
       cache: false,
       type: "GET",
-      url: `http://localhost:5000/report?${task ? `task=${task}` : ''}`,
+      url: `http://localhost:5000/report?${task ? `task=${task}` : ''}${week ? `week=${week}` : ''}`,
       contentType: 'application/json',
       success: function(data) {
-        console.log(data)
-        app.users = data.users
-        var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
-        totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
-        app.datesTotals = totals
+        refreshTable(data)
       }
     });
   }
@@ -181,15 +251,7 @@ $(function() {
       data: data,
       contentType: 'application/json',
       success: function(data) {
-        console.log(data)
-        app.users = []
-        // app.users = data.users
-        var totals = Object.keys(data.dates).map((date) => { return { date, total: data.dates[date] } })
-        totals.push({ total: totals.reduce((prev, cur) => prev + cur.total, 0)})
-        app.datesTotals = totals
-        data.users.forEach(function(user, index) {
-          Vue.set(app.users, index, user)
-        })
+        updateReport(app.week)
       },
       error: function(a, b, c) {
         console.log(a, b, c)
@@ -198,7 +260,15 @@ $(function() {
     });
     return false;
   })
-  updateReport()
+  updateReport(app.week)
+  $('body').on('click', '#logout', function() {
+    savedData.lastLogin = null
+    localStorage.setItem('jira-worklog-v1', btoa(JSON.stringify(savedData)));
+    window.location.href = '/';
+  })
+  $('body').on('click', '#refresh', function() {
+    updateReport(app.week)
+  })
 })
 </script>
 </html>

@@ -57,9 +57,10 @@ app.get('/report', (req, res) => {
   res.header('Pragma', 'no-cache')
   res.header('Expires', 0)
 
-  const { task } = req.query || {}
-  const start = moment().add(-6, 'days').format('YYYY-MM-DD')
-  const end = moment().add(1, 'days').format('YYYY-MM-DD')
+  let { task, week } = req.query || {}
+  week = week || moment().week()
+  const start = moment().week(week).startOf('week').format('YYYY-MM-DD')
+  const end = moment().week(week).endOf('week').format('YYYY-MM-DD')
   if (!task && reportCache[`${start}${end}`]) {
     return res.json(reportCache[`${start}${end}`])
   }
@@ -69,42 +70,36 @@ app.get('/report', (req, res) => {
       worklogDate >= '${start}' AND worklogDate <= '${end}'
     ) OR (
       updated >= '${start}' AND updated <= '${end}'
-    ) OR (
-      created >= '${start}' AND created <= '${end}'
     )
-  ) AND timespent >= 0 ${cfg.project ? 'AND project = ' + cfg.project : ''}`
+  ) AND timespent > 0 ${cfg.project ? 'AND project = ' + cfg.project : ''}`
 
   jira.search(jql, (error, response, body) => {
     try {
       if (error) throw error
       const data = JSON.parse(body)
-      return Promise.all(data.issues.map((i) => getIssueWorklogs(i.key)))
+      return Promise.all((data.issues || []).map((i) => getIssueWorklogs(i.key)))
       .then((issues) => {
         const startDate = moment(start)
-        const loopDate = moment(start)
         const endDate = moment(end).endOf('day')
-        while (loopDate.isBefore(endDate)) {
-          loggedDates[loopDate.format('YYYY-MM-DD')] = 0
-          loopDate.add(1, 'days')
-        }
+        const result = []
         issues.forEach((issue) => {
-          issue.worklogs.forEach((wl) => {
+          (issue.worklogs || []).forEach((wl) => {
             let worklogDate = moment(wl.started.substring(0, 10))
             if (worklogDate < startDate) return
             if (worklogDate > endDate) return
-            worklogDate = worklogDate.format('YYYY-MM-DD')
-            const author = wl.author.displayName
-            reportCache[author] = reportCache[author] || { name: author, totalSpent: 0, avatar: wl.author.avatarUrls['24x24'], dates: {} }
-            reportCache[author].dates[worklogDate] = reportCache[author].dates[worklogDate] || { spent: 0, issues: { } }
-            reportCache[author].dates[worklogDate].issues[issue.key] = reportCache[author].dates[worklogDate].issues[issue.key] || 0
-            reportCache[author].dates[worklogDate].issues[issue.key] += wl.timeSpentSeconds
-            reportCache[author].dates[worklogDate].spent += wl.timeSpentSeconds
-            reportCache[author].totalSpent += wl.timeSpentSeconds
-            loggedDates[worklogDate] = loggedDates[worklogDate] || 0
-            loggedDates[worklogDate] += wl.timeSpentSeconds
+            const wlDate = worklogDate.format('YYYY-MM-DD')
+            result.push({
+              id: `${wl.id}`,
+              issue: issue.key,
+              author: wl.author.displayName,
+              timeSpentSeconds: wl.timeSpentSeconds,
+              worklogDate,
+              wlDate,
+              url: `${cfg.protocol}://${cfg.host}/browse/${issue.key}`
+            })
           })
         })
-        return res.json(serializeReport())
+        return res.json({ week, worklogs: result.sort((a, b) => a.worklogDate.toDate() - b.worklogDate.toDate()) })
       })
       .catch((er) => {
         console.error(er)
@@ -130,7 +125,7 @@ app.post('/auth', (req, res) => {
   cfg.password = password
   cfg.project = project
   cfg.version = version || 2
-  cfg.protocol = parsedUrl.protocol
+  cfg.protocol = (parsedUrl.protocol || '').replace(/:\/*$/, '')
   cfg.host = parsedUrl.host
   jira.setup(cfg.username, cfg.password, cfg.host, cfg.protocol, cfg.apiVersion)
   const result = JSON.parse(JSON.stringify(cfg))
