@@ -255,7 +255,7 @@ $(function() {
       },
       error: function(a, b, c) {
         console.log(a, b, c)
-        alert('Erro!')
+        alert('Erro!' + a.responseText)
       }
     });
     return false;

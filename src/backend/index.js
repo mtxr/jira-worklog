@@ -150,6 +150,10 @@ app.post('/worklog/:id', (req, res) => {
 
   jira.createWorklog(id, body, (error, response, wl) => {
     try {
+      if (wl.errorMessages) {
+        res.status(501)
+        return res.json(wl)
+      }
       if (error) throw error
       let worklogDate = moment(wl.started.substring(0, 10))
       worklogDate = worklogDate.format('YYYY-MM-DD')
