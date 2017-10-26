@@ -17,7 +17,7 @@ function setup (u, p, s, pro, v) {
 
 function search (jql, cb = undefined) {
   const query = {
-    fields: ['key'].join(','),
+    fields: ['key', 'name', 'summary'].join(','),
     maxResults: 5000,
     jql
   }

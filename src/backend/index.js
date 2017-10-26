@@ -12,15 +12,15 @@ const url = require('url')
 app.use(bodyParser.json())
 app.use(express.static(`${__dirname}/../../public`))
 
-const getIssueWorklogs = (key, att = 3) => {
-  if (att === 0) return Promise.reject(new Error(`Max attempts for issue ${key} reachead!`))
+const getIssueWorklogs = (issue, att = 3) => {
+  if (att === 0) return Promise.reject(new Error(`Max attempts for issue ${issue.key} reachead!`))
 
   return new Promise((resolve, reject) => {
-    jira.worklog(key, (error, response, body) => {
+    jira.worklog(issue.key, (error, response, body) => {
       try {
         if (error) throw error
         const data = JSON.parse(body)
-        data.key = key
+        data.key = issue.key
         return resolve(data)
       } catch (er) {
         return reject(er)
@@ -28,12 +28,13 @@ const getIssueWorklogs = (key, att = 3) => {
     })
   })
   .then((all) => {
-    all.key = key
+    all.key = issue.key
+    all.name = issue.fields.summary
     return all
   })
   .catch(() => {
-    console.log('retry ' + key)
-    return getIssueWorklogs(key, att--)
+    console.log('retry ' + issue.key)
+    return getIssueWorklogs(issue, att--)
   })
 }
 
@@ -77,7 +78,7 @@ app.get('/report', (req, res) => {
     try {
       if (error) throw error
       const data = JSON.parse(body)
-      return Promise.all((data.issues || []).map((i) => getIssueWorklogs(i.key)))
+      return Promise.all((data.issues || []).map((i) => getIssueWorklogs(i)))
       .then((issues) => {
         const startDate = moment(start)
         const endDate = moment(end).endOf('day')
@@ -91,6 +92,7 @@ app.get('/report', (req, res) => {
             result.push({
               id: `${wl.id}`,
               issue: issue.key,
+              issueName: issue.name,
               author: wl.author.displayName,
               timeSpentSeconds: wl.timeSpentSeconds,
               worklogDate,
@@ -130,7 +132,6 @@ app.post('/auth', (req, res) => {
   jira.setup(cfg.username, cfg.password, cfg.host, cfg.protocol, cfg.apiVersion)
   const result = JSON.parse(JSON.stringify(cfg))
   delete result.password
-  console.log(result)
   res.json(result)
 })
 

@@ -101,6 +101,7 @@
         <thead>
           <tr>
             <th>Issue</th>
+            <th>Name</th>
             <th>Author</th>
             <th>Data</th>
             <th>Tempo</th>
@@ -108,7 +109,8 @@
         </thead>
         <tbody v-if="worklogs && worklogs.length > 0">
           <tr v-for="worklog in worklogs">
-            <td><a v-bind:href="worklog.url">{{ worklog.issue }}</a></td>
+            <td><a v-bind:href="worklog.url" v-bind:title="worklog.issueName">{{ worklog.issue }}</a></td>
+            <td>{{ worklog.issueName }}</td>
             <td>{{ worklog.author }}</td>
             <td>{{ worklog.wlDate }}</td>
             <td>{{ (worklog.timeSpentSeconds / 3600).toFixed(2) }}</td>
@@ -116,7 +118,7 @@
         </tbody>
         <tbody v-if="!worklogs || worklogs.length === 0">
             <tr>
-              <td colspan="4" class="text-center">Carregando</td>
+              <td colspan="5" class="text-center">Carregando</td>
             </tr>
         </tbody>
       </table>
