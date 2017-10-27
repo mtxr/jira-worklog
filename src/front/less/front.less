@@ -1,18 +1,67 @@
 @import "./../../../node_modules/bootstrap/less/bootstrap.less";
 
-body {
-    padding-top: 100px;
+@colorBlue: rgb(25, 59, 105);
+
+body, html {
+  height: 100%;
 }
-.table-hours {
+body {
+  min-height: 100%;
+}
+#report {
+  body {
+    padding-top: 100px;
+  }
+  .table-hours {
     margin-top: 30px;
     img {
-        max-width: 32px;
+      max-width: 32px;
     }
     .time {
-        font-weight: bold;
+      font-weight: bold;
     }
 
     .today {
-        background-color: rgba(0,0,0,0.05);
+      background-color: rgba(0,0,0,0.05);
     }
+  }
+}
+
+#tracker {
+  background: rgba(0, 0, 0, 0);
+  .arrow-up {
+    margin: auto;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+
+    border-bottom: 10px solid @colorBlue;
+  }
+
+  .tracker-body {
+    border-radius: 5px;
+    background: white;
+    width: 400px;
+    height: 590px;
+    overflow: hidden;
+  }
+  .navbar-brand {
+    color: white !important;
+  }
+
+  .bg-blue {
+    background: @colorBlue;
+  }
+  .bd-blue {
+    border-color: @colorBlue;
+    border-left-color: @colorBlue;
+    border-right-color: @colorBlue;
+    border-top-color: @colorBlue;
+    border-bottom-color: @colorBlue;
+  }
+
+  .color-blue {
+    color: @colorBlue;
+  }
 }

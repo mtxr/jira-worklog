@@ -4,8 +4,8 @@
   "description": "",
   "main": "src/backend/index.js",
   "scripts": {
-    "start": "./node_modules/.bin/electron src/backend/index.js",
-    "start:dev": "IS_DEV=true nodemon ./node_modules/.bin/electron --remote-debugging-port=9222 src/backend/index.js",
+    "start": "./node_modules/.bin/electron src/main.js",
+    "start:dev": "IS_DEV=true nodemon ./node_modules/.bin/electron --remote-debugging-port=9222 src/main.js",
     "build": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
