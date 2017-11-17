@@ -2,6 +2,16 @@
 
 @colorBlue: rgb(25, 59, 105);
 
+.input-group .selectize-input:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.input-group .selectize-input:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
 body, html {
   height: 100%;
 }
@@ -64,4 +74,8 @@ body {
   .color-blue {
     color: @colorBlue;
   }
+}
+
+.input-group-btn:last-child > .btn, .input-group-btn:last-child > .btn-group {
+  margin-top: -4px;
 }

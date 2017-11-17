@@ -5,10 +5,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Controle de Jornada</title>
-  <script>window.$ = window.jQuery = require('./jquery.min.js');</script>
-  <script src="vue.js"></script>
-  <script src="https://unpkg.com/moment"></script>
-  <script src="bundle.js"></script>
+  <script type"text/javascript">window.$ = window.jQuery = require('./jquery.min.js');</script>
+  <script type"text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.4/js/standalone/selectize.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.4/css/selectize.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.4/css/selectize.bootstrap3.css">
+  <script type"text/javascript" src="vue.js"></script>
+  <script type"text/javascript" src="https://unpkg.com/moment"></script>
+  <script type"text/javascript" src="bundle.js"></script>
 </head>
 
 <body id="tracker">
@@ -30,9 +33,9 @@
             <label for="taskName">Activity</label>
             <input type="hidden" name="taskKey"/>
             <div class="input-group">
-              <input type="email" class="form-control" id="taskName" placeholder="Activity"/>
+              <input type="email" class="" id="taskName" placeholder="Activity"/>
               <span class="input-group-btn">
-                <button name="toggle" type="button" class="btn btn-default">&#9658;</button>
+                <button name="toggle" type="button" class="btn btn-default">V</button>
               </span>
             </div>
           </div>
@@ -45,5 +48,41 @@
       </ul>
     </div>
   </div>
+  <script>
+    $(function() {
+      $('#taskName').selectize({
+        maxItems: 1,
+        valueField: 'key',
+        labelField: 'key',
+        searchField: 'summary',
+        create: false,
+        render: {
+          option: function(item, escape) {
+            console.log(item)
+            return '<div>' +
+                '<span class="title">' +
+                    escape(item.key) +
+                '</span> - ' +
+                '<span class="description">' + escape(item.summary) + '</span>' +
+            '</div>';
+          }
+        },
+        load: function(query, callback) {
+            if (!query.length) return callback();
+            $.ajax({
+                url: 'http://localhost:5000/search-task?q=' + encodeURIComponent(query),
+                type: 'GET',
+                error: function() {
+                    callback();
+                },
+                success: function(res) {
+                  console.log(res)
+                  callback(res);
+                }
+            });
+        }
+      });
+    })
+  </script>
 </body>
 </html>

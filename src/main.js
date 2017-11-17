@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray } = require('electron')
+const { app, BrowserWindow, Tray, Menu } = require('electron')
 const path = require('path')
 const url = require('url')
 
@@ -9,7 +9,7 @@ const WINDOW_HEIGTH = 600
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let screen
-let reportWin
+let navWin
 let trayWin
 let tray
 
@@ -18,12 +18,35 @@ function createTray () {
   tray = new Tray(`${__dirname}/img/icon.png_16x16.png`)
   tray.on('click', () => {
     const cursorPosition = screen.getCursorScreenPoint()
-
     trayWin.setPosition(cursorPosition.x - WINDOW_WIDTH / 2, TRAY_ARROW_HEIGHT)
 
     trayWin.show()
     trayWin.focus()
   })
+  tray.on('right-click', () => {
+    tray.contextMenu.popup()
+  })
+
+  tray.contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Relatório',
+      click: (item, win, event) => {
+        navWin.openReport()
+        navWin.show()
+      }
+    },
+    {
+      label: 'Configurar',
+      click: (item, win, event) => {
+        navWin.openConfig()
+        navWin.show()
+      }
+    },
+    { type: 'separator' },
+    { label: 'Sair', click: () => app.quit() }
+  ])
+  tray.setToolTip('This is my application.')
+  // tray.setContextMenu(contextMenu)
 }
 
 function createTrackerWindow () {
@@ -69,6 +92,13 @@ function createWindow (options = {}) {
     // when you should delete the corresponding element.
     win = null
   })
+
+  if (options.methods) {
+    Object.keys(options.methods).forEach((method) => {
+      win[method] = options.methods[method]
+    })
+  }
+
   return win
 }
 
@@ -79,7 +109,26 @@ app.on('ready', () => {
   screen = require('electron').screen
   createTrackerWindow()
   createTray()
-  reportWin = reportWin || createWindow()
+  navWin = navWin || createWindow({
+    methods: {
+      openConfig: () => {
+        navWin.loadURL(url.format({
+          pathname: path.join(__dirname, '..', 'public', 'index.html'),
+          protocol: 'file:',
+          slashes: true
+        }))
+      },
+      openReport: () => {
+        navWin.loadURL(url.format({
+          pathname: path.join(__dirname, '..', 'public', 'logado.html'),
+          protocol: 'file:',
+          slashes: true
+        }))
+      }
+    }
+  })
+  // reportWin.show()
+  // reportWin.webContents.openDevTools()
 })
 
 // Quit when all windows are closed.
@@ -94,10 +143,12 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   // On macOS it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
-  if (reportWin === null) {
-    reportWin = reportWin || createWindow()
+  if (navWin === null) {
+    navWin = navWin || createWindow()
   }
 })
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+require('child_process').spawn('node', [`${__dirname}/backend/index.js`])

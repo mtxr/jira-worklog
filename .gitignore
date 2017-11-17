@@ -4,3 +4,5 @@ report.html
 package-lock.json
 mock
 config.json
+etc/
+db/

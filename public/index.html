@@ -12,7 +12,7 @@
 
 <body style="display: none;"  id="report">
   <main>
-    <nav class="navbar navbar-inverse navbar-fixed-top">
+    <nav class="navbar navbar-inverse">
       <div class="container">
         <div class="navbar-header">
           <a class="navbar-brand" href="#">Controle de Jornada</a>
@@ -39,8 +39,15 @@
               <label for="" class="label-control">Projeto</label>
               <input type="text" class="form-control" name="project" id="project" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Entrar</button>
-          </div>
+            <div class="row">
+              <div class="col-xs-6">
+                <a class="btn btn-default btn-block" href="logado.html">Voltar</a>
+              </div>
+              <div class="col-xs-6">
+                <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -48,7 +55,7 @@
 </body>
 <script>
 $(function() {
-  function auth(authData, shouldNotAlert) {
+  function auth(authData, shouldNotAlert = false, callback) {
     $.ajax({
       cache: false,
       type: "POST",
@@ -61,7 +68,8 @@ $(function() {
       console.log('Login!', data)
       authData.lastLogin = new Date()
       localStorage.setItem('jira-worklog-v1', btoa(JSON.stringify(authData)));
-      window.location.href = '/logado.html';
+      callback && callback()
+      // window.location.href = 'logado.html';
     })
     .fail(function (jqXHR, textStatus, errorThrown ) {
       $('body').fadeIn();
@@ -76,7 +84,8 @@ $(function() {
   savedData = savedData ? JSON.parse(atob(savedData)) : null;
   if (savedData && (Math.abs(new Date() - new Date(savedData.lastLogin || 0)) / 86400000 / 3600000) <= 8) {
     auth(savedData, true)
-    return;
+    $('body').fadeIn();
+    // return;
   }
   else {
     $('body').fadeIn();
@@ -98,7 +107,9 @@ $(function() {
       prev[cur.name] = cur.value;
       return prev;
     }, {});
-    auth(authData)
+    auth(authData, false, () => {
+      window.location.href = 'logado.html'
+    })
     return false;
   // }).on('keydown keypress keyup', 'input', function(event){
   //   if( (event.keyCode == 13) && (validationFunction() == false) ) {

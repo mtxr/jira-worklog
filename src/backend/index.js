@@ -53,6 +53,27 @@ function serializeReport () {
   return { users, dates: loggedDates }
 }
 
+app.get('/search-task', (req, res) => {
+  req.query = req.query || {}
+  // let key = (req.query.q || '').replace(/[^0-9]/g, '')
+  // key = key !== '' ? `issueKey = '${key}' OR` : ''
+  const jql = `(summary ~ '${req.query.q}') ${cfg.project ? 'AND project = ' + cfg.project : ''}`
+
+  jira.search(jql, (error, response, body) => {
+    try {
+      if (error) throw error
+      const data = JSON.parse(body)
+      res.json(data.issues.slice(0, 10).map((t) => {
+        t.summary = t.fields.summary
+        return t
+      }))
+    } catch (e) {
+      console.error(e)
+      res.json({issues: []})
+    }
+  })
+})
+
 app.get('/report', (req, res) => {
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
   res.header('Pragma', 'no-cache')
